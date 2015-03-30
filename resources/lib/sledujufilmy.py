@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 class SledujuFilmyContentProvider(ContentProvider):
     urls = {'Filmy': 'http://sledujufilmy.cz', 'Seriály': 'http://serialy.sledujufilmy.cz'}
 
-    def __init__(self, username=None, password=None, filter=None, tmp_dir='.'):
+    def __init__(self, username=None, password=None, filter=None):
         ContentProvider.__init__(self, 'sledujufilmy.cz', self.urls['Filmy'], username, password, filter)
         util.init_urllib()
 
@@ -53,7 +53,7 @@ class SledujuFilmyContentProvider(ContentProvider):
                 return self.list_episodes(url)
             elif url.count('/') > 2:
                 return self.list_seasons(url)
-            return self.list_series(url + '/abecedni-seznam/')
+            return self.list_series(url)
         else:
             if url.count('/') > 2:
                 return self.list_movies(url)
@@ -102,6 +102,7 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def list_series(self, url):
         result = []
+        url += '/abecedni-seznam/'
         while len(url) > 0:
             tree = self.parse(url)
             for series in tree.select('#content .movies_list a.item'):
@@ -131,7 +132,8 @@ class SledujuFilmyContentProvider(ContentProvider):
     def list_episodes(self, url):
         result = []
         url, season = url.split('#', 1)
-        for episode in self.parse(url).select('#episodes--list dd:nth-of-type(' + season + ') ul.episodes li'):
+        for episode in self.parse(url).select('#episodes--list dd:nth-of-type(' + season +
+                                              ') ul.episodes li'):
             link = episode.find('a', 'view')
             link.extract()
             item = self.video_item()
@@ -143,20 +145,23 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def resolve(self, item, captcha_cb=None, select_cb=None):
         streams = []
-        data = self.parse(item['url']).find_all('a', {'class': ['play-movie', 'play-epizode']})
-        if len(data) > 0 and data[0].get('data-loc'):
-            url = 'http://stream-a-ams1xx2sfcdnvideo5269.cz/' + \
-                  ('prehravac.php?play=serail&id=' if 'serialy.' in item['url'] else 'okno.php?new_way=yes&film=') + \
-                  data[0].get('data-loc')
-            for stream in self.parse(url).select('.container .free--box')[0].find_all(
-                    ['embed', 'object', 'iframe', 'script']):
-                for attribute in ['src', 'data']:
-                    value = stream.get(attribute)
-                    if value:
-                        streams.append(value)
+        link = self.parse(item['url']).find('a', {'class': ['play-movie', 'play-epizode']})
+        if link and link.get('data-loc'):
+            url = 'http://stream-a-ams1xx2sfcdnvideo5269.cz/'
+            if 'serialy.' in item['url']:
+                url += 'prehravac.php?play=serail&id='
+            else:
+                url += 'okno.php?new_way=yes&film='
+            url += link.get('data-loc')
+            for container in self.parse(url).select('.container .free--box'):
+                for stream in container.find_all(['embed', 'object', 'iframe', 'script']):
+                    for attribute in ['src', 'data']:
+                        value = stream.get(attribute)
+                        if value:
+                            streams.append(value)
             result = self.findstreams('\n'.join(streams), ['(?P<url>[^\n]+)'])
             if len(result) == 1:
                 return result[0]
             elif len(result) > 1 and select_cb:
                 return select_cb(result)
-            return None
+        return None
