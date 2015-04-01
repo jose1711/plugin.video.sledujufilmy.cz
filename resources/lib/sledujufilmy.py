@@ -91,12 +91,13 @@ class SledujuFilmyContentProvider(ContentProvider):
     def list_movies(self, url):
         result = []
         tree = self.parse(url)
-        for movie in tree.select('#content .mlist--list > .item'):
-            item = self.video_item()
-            item['title'] = movie.select('.info h3')[0].text
-            item['url'] = self.movie_url(movie.select('.info .ex a')[0].get('href'))
-            item['img'] = self.movie_url(movie.select('.img--container img')[0].get('src'))
-            result.append(item)
+        for movie in tree.select('#content .mlist--list .item'):
+            if not movie.find('span', 'top'):
+                item = self.video_item()
+                item['title'] = movie.select('.info h3')[0].text
+                item['url'] = self.movie_url(movie.select('.info .ex a')[0].get('href'))
+                item['img'] = self.movie_url(movie.select('.img--container img')[0].get('src'))
+                result.append(item)
         active_page = tree.select('#content .pagination .active')
         if len(active_page) > 0:
             next_page = active_page[0].find_next_sibling('a')
