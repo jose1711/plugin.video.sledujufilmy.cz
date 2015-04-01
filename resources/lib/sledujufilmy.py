@@ -30,7 +30,14 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def __init__(self, username=None, password=None, filter=None):
         ContentProvider.__init__(self, 'sledujufilmy.cz', self.urls['Filmy'], username, password, filter)
-        util.init_urllib()
+        # Work around April Fools' Day page
+        util.init_urllib(self.cache)
+        cookies = self.cache.get('cookies')
+        if not cookies or len(cookies) == 0:
+            util.request(self.base_url)
+
+    def __del__(self):
+        util.cache_cookies(self.cache)
 
     def capabilities(self):
         return ['resolve', 'categories', 'search']
