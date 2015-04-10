@@ -167,7 +167,7 @@ class SledujuFilmyContentProvider(ContentProvider):
                         value = stream.get(attribute)
                         if value:
                             streams.append(value)
-            result = self.findstreams('\n'.join(streams), ['(?P<url>[^\n]+)'])
+            result = self.findstreams(streams)
             if len(result) == 1:
                 return result[0]
             elif len(result) > 1 and select_cb:
