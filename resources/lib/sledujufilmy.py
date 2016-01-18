@@ -29,7 +29,8 @@ class SledujuFilmyContentProvider(ContentProvider):
     urls = {'Filmy': 'http://sledujufilmy.cz', 'Seriály': 'http://serialy.sledujufilmy.cz'}
 
     def __init__(self, username=None, password=None, filter=None):
-        ContentProvider.__init__(self, 'sledujufilmy.cz', self.urls['Filmy'], username, password, filter)
+        ContentProvider.__init__(self, 'sledujufilmy.cz', self.urls['Filmy'],
+                                 username, password, filter)
         # Work around April Fools' Day page
         util.init_urllib(self.cache)
         cookies = self.cache.get('cookies')
@@ -52,7 +53,8 @@ class SledujuFilmyContentProvider(ContentProvider):
         return result
 
     def search(self, keyword):
-        return self.list_movies(self.movie_url('/vyhledavani/?search=' + urllib.quote_plus(keyword)))
+        return self.list_movies(self.movie_url(
+            '/vyhledavani/?search=' + urllib.quote_plus(keyword)))
 
     def list(self, url):
         if 'serialy.' in url:
@@ -161,9 +163,9 @@ class SledujuFilmyContentProvider(ContentProvider):
             else:
                 url += 'okno.php?new_way=yes&film='
             url += link.get('data-loc')
-            for container in self.parse(url).select('.container .free--box'):
-                for stream in container.find_all(['embed', 'object', 'iframe', 'script']):
-                    for attribute in ['src', 'data']:
+            for container in self.parse(url).select('.container .free--box .center--inner'):
+                for stream in container.find_all(['embed', 'object', 'iframe', 'script', 'a']):
+                    for attribute in ['src', 'data', 'href']:
                         value = stream.get(attribute)
                         if value:
                             streams.append(value)
