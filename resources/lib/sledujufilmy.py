@@ -22,7 +22,6 @@
 import urllib
 import util
 from provider import ContentProvider
-from bs4 import BeautifulSoup
 
 
 class SledujuFilmyContentProvider(ContentProvider):
@@ -68,9 +67,6 @@ class SledujuFilmyContentProvider(ContentProvider):
                 return self.list_movies(url)
             return self.list_genres(url)
 
-    def parse(self, url):
-        return BeautifulSoup(util.request(url))
-
     def movie_url(self, url):
         return self.urls['Filmy'] + url
 
@@ -83,7 +79,7 @@ class SledujuFilmyContentProvider(ContentProvider):
         item['title'] = 'Všetky'
         item['url'] = url + '/seznam-filmu/'
         result.append(item)
-        for genre in self.parse(url).select('#content .genres .buts a'):
+        for genre in util.parse_html(url).select('#content .genres .buts a'):
             item = self.dir_item()
             item['title'] = genre.text
             item['url'] = url + genre.get('href')
@@ -92,7 +88,7 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def list_movies(self, url):
         result = []
-        tree = self.parse(url)
+        tree = util.parse_html(url)
         for movie in tree.select('#content .mlist--list .item'):
             if not movie.find('span', 'top'):
                 item = self.video_item()
@@ -114,7 +110,7 @@ class SledujuFilmyContentProvider(ContentProvider):
         result = []
         url += '/abecedni-seznam/'
         while len(url) > 0:
-            tree = self.parse(url)
+            tree = util.parse_html(url)
             for series in tree.select('#content .movies_list a.item'):
                 item = self.dir_item()
                 item['title'] = series.h3.text
@@ -132,7 +128,7 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def list_seasons(self, url):
         result = []
-        for season in self.parse(url).select('#episodes--list a.accordionTitle'):
+        for season in util.parse_html(url).select('#episodes--list a.accordionTitle'):
             item = self.dir_item()
             item['title'] = season.text.split(' - ', 1)[1]
             item['url'] = url + '#' + item['title'].split('. ', 1)[0]
@@ -142,7 +138,7 @@ class SledujuFilmyContentProvider(ContentProvider):
     def list_episodes(self, url):
         result = []
         url, season = url.split('#', 1)
-        for episode in self.parse(url).select('#episodes--list dd:nth-of-type(' + season +
+        for episode in util.parse_html(url).select('#episodes--list dd:nth-of-type(' + season +
                                               ') ul.episodes li'):
             link = episode.find('a', 'view')
             link.extract()
@@ -155,7 +151,7 @@ class SledujuFilmyContentProvider(ContentProvider):
 
     def resolve(self, item, captcha_cb=None, select_cb=None):
         streams = []
-        link = self.parse(item['url']).find('a', {'class': ['play-movie', 'play-epizode']})
+        link = util.parse_html(item['url']).find('a', {'class': ['play-movie', 'play-epizode']})
         if link and link.get('data-loc'):
             url = 'http://stream-a-ams1xx2sfcdnvideo5269.cz/'
             if 'serialy.' in item['url']:
@@ -163,7 +159,7 @@ class SledujuFilmyContentProvider(ContentProvider):
             else:
                 url += 'okno.php?new_way=yes&film='
             url += link.get('data-loc')
-            for container in self.parse(url).select('.container .free--box .center--inner'):
+            for container in util.parse_html(url).select('.container .free--box .center--inner'):
                 for stream in container.find_all(['embed', 'object', 'iframe', 'script', 'a']):
                     for attribute in ['src', 'data', 'href']:
                         value = stream.get(attribute)
