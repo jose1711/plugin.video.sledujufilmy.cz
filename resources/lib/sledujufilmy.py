@@ -130,7 +130,7 @@ class SledujuFilmyContentProvider(ContentProvider):
         result = []
         for season in util.parse_html(url).select('#episodes--list a.accordionTitle'):
             item = self.dir_item()
-            item['title'] = season.text.split(' - ', 1)[1]
+            item['title'] = season.text.split(' - ')[-1]
             item['url'] = url + '#' + item['title'].split('. ', 1)[0]
             result.append(item)
         return result
