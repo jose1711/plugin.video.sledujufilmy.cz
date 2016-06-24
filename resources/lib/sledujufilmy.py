@@ -21,17 +21,19 @@
 # */
 import urllib
 import util
+import urllib2
 from provider import ContentProvider
 
 
 class SledujuFilmyContentProvider(ContentProvider):
     urls = {'Filmy': 'http://sledujufilmy.cz', 'Seriály': 'http://serialy.sledujufilmy.cz'}
 
-    def __init__(self, username=None, password=None, filter=None):
+    def __init__(self, username=None, password=None, filter=None, quickparser=False):
         ContentProvider.__init__(self, 'sledujufilmy.cz', self.urls['Filmy'],
                                  username, password, filter)
         # Work around April Fools' Day page
         util.init_urllib(self.cache)
+        self.quickparser=quickparser
         cookies = self.cache.get('cookies')
         if not cookies or len(cookies) == 0:
             util.request(self.base_url)
@@ -109,22 +111,35 @@ class SledujuFilmyContentProvider(ContentProvider):
     def list_series(self, url):
         result = []
         url += '/abecedni-seznam/'
-        while len(url) > 0:
-            tree = util.parse_html(url)
-            for series in tree.select('#content .movies_list a.item'):
-                item = self.dir_item()
-                item['title'] = series.h3.text
-                item['url'] = self.series_url(series.get('href'))
-                item['img'] = self.series_url(series.img.get('src'))
-                result.append(item)
-            active_page = tree.select('#content .pagination .active')
-            if len(active_page) > 0:
-                next_page = active_page[0].find_next_sibling('a')
-                if next_page:
-                    url = self.series_url(next_page.get('href'))
-                    continue
-            url = ''
-        return result
+        if self.quickparser in 'true':
+            for ix in xrange(1,35):
+                data=urllib2.urlopen(urllib2.Request('%s/?pg=%s' % (url,ix))).read()
+                data=data.split('</iframe>')[2].split('</div>',3)[3]
+                for elem in [x for x in data.split('</a>') if 'item' in x and not 'personality' in x and not 'creator' in x and not 'function' in x][0:18]:
+                    urlline,imgline=elem.splitlines()[1:3]
+                    item = self.dir_item()
+                    item['title'] = imgline.split('"')[3]
+                    item['img'] = self.series_url(imgline.split('"')[1])
+                    item['url'] = self.series_url(urlline.split('"')[1])
+                    result.append(item)
+            return result
+        else:
+            while len(url) > 0:
+                tree = util.parse_html(url)
+                for series in tree.select('#content .movies_list a.item'):
+                    item = self.dir_item()
+                    item['title'] = series.h3.text
+                    item['url'] = self.series_url(series.get('href'))
+                    item['img'] = self.series_url(series.img.get('src'))
+                    result.append(item)
+                active_page = tree.select('#content .pagination .active')
+                if len(active_page) > 0:
+                    next_page = active_page[0].find_next_sibling('a')
+                    if next_page:
+                        url = self.series_url(next_page.get('href'))
+                        continue
+                url = ''
+            return result
 
     def list_seasons(self, url):
         result = []

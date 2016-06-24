@@ -37,7 +37,9 @@ import sledujufilmy
 
 settings = {'downloads': __addon__.getSetting('downloads'), 'quality': __addon__.getSetting('quality')}
 
+parser=__addon__.getSetting('parser')
+
 params = util.params()
 if params == {}:
     xbmcutil.init_usage_reporting(__scriptid__)
-xbmcprovider.XBMCMultiResolverContentProvider(sledujufilmy.SledujuFilmyContentProvider(), settings, __addon__).run(params)
+xbmcprovider.XBMCMultiResolverContentProvider(sledujufilmy.SledujuFilmyContentProvider(quickparser=parser), settings, __addon__).run(params)
